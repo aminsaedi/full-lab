@@ -1,0 +1,9 @@
+---
+all:
+  children:
+    gitlab:
+
+gitlab:
+  hosts:
+    gitlab-server:
+      ansible_host: "{{ gitlab_host }}"

@@ -1,0 +1,50 @@
+---
+
+- name: "Update system packages"
+  apt:
+    update_cache: yes
+    cache_valid_time: 36000 # 10 hours
+
+- name: "Install dependencies"
+  apt:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - curl
+    - openssh-server
+    - ca-certificates
+    - tzdata
+    - perl
+    - postfix
+    - apt-transport-https
+
+- name: "Check if /etc/gitlab exists"
+  stat:
+    path: /etc/gitlab
+  register: gitlab_dir
+
+- name: "Add GitLab repository"
+  shell: "curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | sudo bash"
+  environment: 
+    os: ubuntu
+    dist: focal
+  when: gitlab_dir.stat.exists == False
+
+- name: "Install GitLab"
+  apt:
+    name: gitlab-ce
+    state: present
+  environment: 
+    EXTERNAL_URL: "https://{{ gitlab_host }}"
+  when: gitlab_dir.stat.exists == False
+
+- name: "Run gitlab reconfigure"
+  shell: gitlab-ctl reconfigure
+  when: gitlab_dir.stat.exists == False
+
+- name: "Fetch the root password"
+  fetch:
+    src: /etc/gitlab/initial_root_password
+    dest: "{{ temp_dir }}/initial_root_password"
+    flat: yes
+  when: gitlab_dir.stat.exists == False
